@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String?
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  mistakes  Mistake[]
+  tags      Tag[]
+}
+
+model Mistake {
+  id           String   @id @default(uuid())
+  content      String
+  correctAnswer String
+  explanation  String?
+  errorReason  String?
+  imageUrl     String?
+  masteryLevel Int      @default(0) // 0-5 掌握程度
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  reviewedAt   DateTime?
+  
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  tags         MistakeTag[]
+}
+
+model Tag {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  mistakes  MistakeTag[]
+  
+  @@unique([name, userId])
+}
+
+model MistakeTag {
+  mistakeId String
+  mistake   Mistake @relation(fields: [mistakeId], references: [id], onDelete: Cascade)
+  
+  tagId     String
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  
+  assignedAt DateTime @default(now())
+  
+  @@id([mistakeId, tagId])
+}
+
+model ReviewSession {
+  id        String   @id @default(uuid())
+  startTime DateTime @default(now())
+  endTime   DateTime?
+  mistakesReviewed Int @default(0)
+  
+  reviewEntries ReviewEntry[]
+}
+
+model ReviewEntry {
+  id        String   @id @default(uuid())
+  mistakeId String
+  oldMasteryLevel Int
+  newMasteryLevel Int
+  reviewedAt DateTime @default(now())
+  
+  sessionId String
+  session   ReviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
